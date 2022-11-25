@@ -15,20 +15,15 @@ using json = nlohmann::json;
 
 bool shouldExit = false;
 
-char *header = 
-"HTTP/1.1 200 OK\n"
-"Server: MiniHTTP 1.0\n"
-"Content-Type: text/html\n"
-"Content-Length: 15\n"
-"Accept-Ranges: bytes\n"
-"Connection: close\n\n";
-
 int server_fd, new_socket; long valread;
 struct sockaddr_in address;
 int addrlen;
 
-char* constructHTTPHeader() {
-    
+char* constructHTTPHeader200(char* server, int length) {
+    char* HTTPHeader = (char*) malloc(strlen(server) + 256 + 16 + 9 + 24 + 17 + 21 + 19);
+    sprintf(HTTPHeader, "HTTP/1.1 200 OK\nServer: %s\nContent-Type: text/html\nContent-Length: %d\nAccept-Ranges: bytes\nConnection: close\n\n", server, length);
+
+    return HTTPHeader;
 }
 
 // https://stackoverflow.com/questions/9210528/split-string-with-delimiters-in-c
@@ -129,7 +124,8 @@ void connection(int mySocket) {
         fclose (responeFile);
 
         std::cout << "index.html" << std::endl;
-        send(mySocket, header, strlen(header), 0);
+        char* head = constructHTTPHeader200("MiniHTTP 1.0", length);
+        send(mySocket, head, strlen(head), 0);
         send(mySocket, filebuf, length, 0);
 
         close(mySocket);
