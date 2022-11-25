@@ -1,5 +1,4 @@
-
 {
-    "numbers": [1, 2, 3],
-    "hi": "hi"
+    "useThreadsForConnection": true,
+    "port": 8080
 }

@@ -2,5 +2,5 @@
 
 extern bool shouldExit;
 
-void startServer(int port);
+void startServer(char* pathToJson);
 // void connection();

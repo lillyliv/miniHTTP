@@ -16,14 +16,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    FILE *fp;
-
-    fp = fopen(argv[1], "r");
-    json j = json::parse(fp);
-    const auto contents = j.dump();
-    std::cout << contents << std::endl;
-
-    std::thread http (startServer, 8080);
+    std::thread http (startServer, argv[1]);
 
     std::this_thread::sleep_for (std::chrono::seconds(60));
 

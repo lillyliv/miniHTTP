@@ -1,6 +1,5 @@
 #include "http.hh"
 
-
 #include <sys/socket.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -8,8 +7,11 @@
 #include <string.h>
 #include <iostream>
 #include "../libs/jthread.hh"
+#include "../libs/json.hh"
 #include <vector>
 #include <assert.h>
+
+using json = nlohmann::json;
 
 bool shouldExit = false;
 
@@ -116,14 +118,22 @@ void connection(int mySocket) {
 
         std::cout << "index.html" << std::endl;
 
-        write(mySocket, filebuf, length);
+        send(mySocket, filebuf, length, MSG_DONTWAIT); // dontwait for non blocking io
 
         close(mySocket);
         return;
 }
 
-void startServer(int port) {
+void startServer(char* pathToJson) {
     shouldExit = false;
+
+    FILE *fp;
+
+    fp = fopen(pathToJson, "r");
+    json j = json::parse(fp);
+
+    int port = j["port"];
+
     std::cout << "starting server on port " << port << std::endl;
 
     addrlen = sizeof(address);
