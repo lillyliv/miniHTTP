@@ -17,11 +17,6 @@ int main(int argc, char* argv[]) {
     }
 
     std::thread http (startServer, argv[1]);
-
-    std::this_thread::sleep_for (std::chrono::seconds(60));
-
-    shouldExit = true;
-
     http.join();
 
     return 0;
