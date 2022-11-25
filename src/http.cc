@@ -15,9 +15,21 @@ using json = nlohmann::json;
 
 bool shouldExit = false;
 
+char *header = 
+"HTTP/1.1 200 OK\n"
+"Server: MiniHTTP 1.0\n"
+"Content-Type: text/html\n"
+"Content-Length: 15\n"
+"Accept-Ranges: bytes\n"
+"Connection: close\n\n";
+
 int server_fd, new_socket; long valread;
 struct sockaddr_in address;
 int addrlen;
+
+char* constructHTTPHeader() {
+    
+}
 
 // https://stackoverflow.com/questions/9210528/split-string-with-delimiters-in-c
 char** str_split(char* a_str, const char a_delim)
@@ -75,7 +87,7 @@ void connection(int mySocket) {
     char buffer[30000] = {0};
     valread = read(mySocket, buffer, 30000);
 
-    // printf("%s\n",buffer );
+    printf("%s\n",buffer );
 
     char* path = str_split(str_split(buffer, '\n')[0], ' ')[1];
 
@@ -117,8 +129,8 @@ void connection(int mySocket) {
         fclose (responeFile);
 
         std::cout << "index.html" << std::endl;
-
-        send(mySocket, filebuf, length, MSG_DONTWAIT); // dontwait for non blocking io
+        send(mySocket, header, strlen(header), 0);
+        send(mySocket, filebuf, length, 0);
 
         close(mySocket);
         return;
