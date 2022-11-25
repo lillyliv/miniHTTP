@@ -68,6 +68,7 @@ char** str_split(char* a_str, const char a_delim)
 
 void connection(int mySocket) {
     std::cout << "New connection" << std::endl;
+    FILE* responeFile;
 
     char buffer[30000] = {0};
     valread = read(mySocket, buffer, 30000);
@@ -84,9 +85,17 @@ void connection(int mySocket) {
 
     if(strcmp(path, "/") == 0) {
         std::cout << "requesting index.html" << std::endl;
-        FILE* responeFile = fopen("index.html", "rb");
+        responeFile = fopen("index.html", "rb");
 
-        if (NULL == responeFile) {
+
+    } else {
+        memmove(path, path+1, strlen(path));
+        responeFile = fopen(path, "rb");
+
+        std::cout << path << std::endl;
+    }
+
+    if (NULL == responeFile) {
             write(mySocket, "the requested file could not be found!", 38);
             close(mySocket);
             return;
@@ -111,39 +120,6 @@ void connection(int mySocket) {
 
         close(mySocket);
         return;
-
-
-    } else {
-        memmove(path, path+1, strlen(path));
-        FILE* responeFile = fopen(path, "rb");
-
-        std::cout << path << std::endl;
-
-        if (NULL == responeFile) {
-            write(mySocket, "the requested file could not be found!", 38);
-            close(mySocket);
-            return;
-        }
-
-        char* filebuf = 0;
-        long length;
-
-        fseek (responeFile, 0, SEEK_END);
-        length = ftell (responeFile);
-        fseek (responeFile, 0, SEEK_SET);
-        filebuf = (char *)malloc (length);
-        if (filebuf)
-        {
-            fread (filebuf, 1, length, responeFile);
-        }
-        fclose (responeFile);
-
-        std::cout << path << std::endl;
-
-        write(mySocket, filebuf, length);
-
-        close(mySocket);
-    }
 }
 
 void startServer(int port) {
