@@ -23,7 +23,7 @@ int main(int argc, char* argv[]) {
     const auto contents = j.dump();
     std::cout << contents << std::endl;
 
-    std::thread http (startServer, 8082);
+    std::thread http (startServer, 8080);
 
     std::this_thread::sleep_for (std::chrono::seconds(60));
 
