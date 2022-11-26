@@ -7,7 +7,7 @@ _  /  / / _  / _  / / /  / _  __  / _  /   _  /   _  ____/
 MiniHTTP is a tiny HTTP server written in C++ (requires 2011 standard).
 
 It uses the JSON library from https://github.com/nlohmann/json and the JThread library from https://github.com/martinmoene/jthread-lite
-These libraries are included in /lib (Note these libraries may have diffrent lisences and are not affiliated with MiniHTTP!)
+These libraries are included in ./libs (Note these libraries may have diffrent lisences and are not affiliated with MiniHTTP!)
 
 This is free and unencumbered software released into the public domain.
 
