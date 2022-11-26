@@ -8,8 +8,7 @@
 #include <iostream>
 #include "../libs/jthread.hh"
 #include "../libs/json.hh"
-#include <vector>
-#include <assert.h>
+#include "util.hh"
 
 using json = nlohmann::json;
 
@@ -18,84 +17,73 @@ bool shouldExit = false;
 int server_fd, new_socket; long valread;
 struct sockaddr_in address;
 int addrlen;
+json serverPrefrences;
 
-char* constructHTTPHeader200(char* server, int length) {
-    char* HTTPHeader = (char*) malloc(strlen(server) + 256 + 16 + 9 + 24 + 17 + 21 + 19);
-    sprintf(HTTPHeader, "HTTP/1.1 200 OK\nServer: %s\nContent-Type: text/html\nContent-Length: %d\nAccept-Ranges: bytes\nConnection: close\n\n", server, length);
+const char ErrorPage404[1024] = "<html><body><center><h1>Error 404 page not found!</h1><footer>This message was sent by MiniHTTP (https://github.com/lillyliv/miniHTTP)</footer></center></body></html>";
+const char* Error500 = "<html><body><center><h1>Error 500 internal server error!</h1><footer>This message was sent by MiniHTTP (https://github.com/lillyliv/miniHTTP)</footer></center></body></html>";
+
+char* constructHTTPHeader500(char* server, long long length) {
+    char* HTTPHeader = (char*) malloc(strlen(server)+1000);
+    sprintf(HTTPHeader, "HTTP/1.1 500 Internal Server Error\nServer: %s\nContent-Type: text/html\nContent-Length: %lld\nAccept-Ranges: bytes\nConnection:close\n\n", server, length);
+}
+
+char* constructHTTPHeader200(char* server, long long length) {
+    char* HTTPHeader = (char*) malloc(strlen(server) + 1000);
+    sprintf(HTTPHeader, "HTTP/1.1 200 OK\nServer: %s\nContent-Type: text/html\nContent-Length: %lld\nAccept-Ranges: bytes\nConnection: close\n\n", server, length);
+
+    return HTTPHeader;
+}
+char* constructHTTPHeader404(char* server, long long length) {
+    char* HTTPHeader = (char*) malloc(strlen(server) + 1000);
+    sprintf(HTTPHeader, "HTTP/1.1 404 Not Found\nStatus: 404 Not Found\nServer: %s\nContent-Type: text/html\nContent-Length: %lld\nAccept-Ranges: bytes\nConnection: close\n\n", server, length);
 
     return HTTPHeader;
 }
 
-// https://stackoverflow.com/questions/9210528/split-string-with-delimiters-in-c
-char** str_split(char* a_str, const char a_delim)
-{
-    char** result    = 0;
-    size_t count     = 0;
-    char* tmp        = a_str;
-    char* last_comma = 0;
-    char delim[2];
-    delim[0] = a_delim;
-    delim[1] = 0;
+char* HTTPResponseBuilder(int responseCode, char* response) {
+    char* servstring = (char*)serverPrefrences["version"].get_ref<const std::string&>().c_str();
 
-    /* Count how many elements will be extracted. */
-    while (*tmp)
-    {
-        if (a_delim == *tmp)
-        {
-            count++;
-            last_comma = tmp;
-        }
-        tmp++;
+    if (responseCode == 200) {
+        char* headertoreturn = constructHTTPHeader200(servstring, strlen(response));
+        char* datatoreturn = (char*) malloc (strlen(headertoreturn) + strlen(response));
+        sprintf(datatoreturn, "%s%s", headertoreturn, response);
+        return datatoreturn;
+    } else if (responseCode == 404) {
+        char* header404toreturn = constructHTTPHeader404(servstring, strlen(ErrorPage404));
+        char* data404toreturn = (char*)malloc(strlen(header404toreturn) + strlen(ErrorPage404));
+        sprintf(data404toreturn, "%s%s", header404toreturn, ErrorPage404);
+        return data404toreturn;
+    } else {
+        char* header500toreturn = constructHTTPHeader500(servstring, strlen(Error500));
+        char* data500toreturn = (char*)malloc(strlen(header500toreturn) + strlen(Error500));
+        sprintf(data500toreturn, "%s%s", header500toreturn, Error500);
+        return data500toreturn;
     }
-
-    /* Add space for trailing token. */
-    count += last_comma < (a_str + strlen(a_str) - 1);
-
-    /* Add space for terminating null string so caller
-       knows where the list of returned strings ends. */
-    count++;
-
-    result = (char**)malloc(sizeof(char*) * count);
-
-    if (result)
-    {
-        size_t idx  = 0;
-        char* token = strtok(a_str, delim);
-
-        while (token)
-        {
-            assert(idx < count);
-            *(result + idx++) = strdup(token);
-            token = strtok(0, delim);
-        }
-        assert(idx == count - 1);
-        *(result + idx) = 0;
-    }
-
-    return result;
 }
+
 
 void connection(int mySocket) {
     std::cout << "New connection" << std::endl;
+    char* versionString = (char*)serverPrefrences["version"].get_ref<const std::string&>().c_str();
+
     FILE* responeFile;
+    char* response;
 
     char buffer[30000] = {0};
     valread = read(mySocket, buffer, 30000);
 
-    printf("%s\n",buffer );
-
     char* path = str_split(str_split(buffer, '\n')[0], ' ')[1];
 
-    if(strstr(path, "..")) {
-        write(mySocket, "Going up a directory not allowed!", 33);
+    if (strstr(path, "..")) {
+        response = HTTPResponseBuilder(404, NULL);
+        write(mySocket, response, strlen(response));
         close(mySocket);
         return;
     }
 
-    if(strcmp(path, "/") == 0) {
+    if (strcmp(path, "/") == 0) {
         std::cout << "requesting index.html" << std::endl;
         responeFile = fopen("index.html", "rb");
-
 
     } else {
         memmove(path, path+1, strlen(path));
@@ -105,10 +93,11 @@ void connection(int mySocket) {
     }
 
     if (NULL == responeFile) {
-            write(mySocket, "the requested file could not be found!", 38);
-            close(mySocket);
-            return;
-        }
+        response = HTTPResponseBuilder(404, NULL);
+        write(mySocket, response, strlen(response));
+        close(mySocket);
+        return;
+    } else {
 
         char* filebuf = 0;
         long length;
@@ -123,13 +112,11 @@ void connection(int mySocket) {
         }
         fclose (responeFile);
 
-        std::cout << "index.html" << std::endl;
-        char* head = constructHTTPHeader200("MiniHTTP 1.0", length);
-        send(mySocket, head, strlen(head), 0);
-        send(mySocket, filebuf, length, 0);
-
+        response = HTTPResponseBuilder(200, filebuf);
+        write(mySocket, response, strlen(response));
         close(mySocket);
         return;
+    }
 }
 
 void startServer(char* pathToJson) {
@@ -138,9 +125,9 @@ void startServer(char* pathToJson) {
     FILE *fp;
 
     fp = fopen(pathToJson, "r");
-    json j = json::parse(fp);
+    serverPrefrences = json::parse(fp);
 
-    int port = j["port"];
+    int port = serverPrefrences["port"];
 
     std::cout << "starting server on port " << port << std::endl;
 
