@@ -21,10 +21,13 @@ json serverPrefrences;
 
 const char ErrorPage404[1024] = "<html><body><center><h1>Error 404 page not found!</h1><footer>This message was sent by MiniHTTP (https://github.com/lillyliv/miniHTTP)</footer></center></body></html>";
 const char* Error500 = "<html><body><center><h1>Error 500 internal server error!</h1><footer>This message was sent by MiniHTTP (https://github.com/lillyliv/miniHTTP)</footer></center></body></html>";
+const char* Error418 = "Error I'm a teapot!"; // only use if server is running on a teapot instead of a coffee pot
 
 char* constructHTTPHeader500(char* server, long long length) {
     char* HTTPHeader = (char*) malloc(strlen(server)+1000);
     sprintf(HTTPHeader, "HTTP/1.1 500 Internal Server Error\nServer: %s\nContent-Type: text/html\nContent-Length: %lld\nAccept-Ranges: bytes\nConnection:close\n\n", server, length);
+
+    return HTTPHeader;
 }
 
 char* constructHTTPHeader200(char* server, long long length) {
@@ -36,6 +39,12 @@ char* constructHTTPHeader200(char* server, long long length) {
 char* constructHTTPHeader404(char* server, long long length) {
     char* HTTPHeader = (char*) malloc(strlen(server) + 1000);
     sprintf(HTTPHeader, "HTTP/1.1 404 Not Found\nStatus: 404 Not Found\nServer: %s\nContent-Type: text/html\nContent-Length: %lld\nAccept-Ranges: bytes\nConnection: close\n\n", server, length);
+
+    return HTTPHeader;
+}
+char* constructHTTPHeader418(long long length) {
+    char* HTTPHeader = (char*) malloc(1000);
+    sprintf(HTTPHeader, "HTTP/1.1 418 I'm a teapot\nStatus: 418 Im a teapot\nServer: %s\nContent-Type: text/html\nContent-Length: %lld\nAccept-Ranges: bytes\nConnection: close\n\n", "MiniHTTP Teapot Server V/1.0", length);
 
     return HTTPHeader;
 }
@@ -53,6 +62,11 @@ char* HTTPResponseBuilder(int responseCode, char* response) {
         char* data404toreturn = (char*)malloc(strlen(header404toreturn) + strlen(ErrorPage404));
         sprintf(data404toreturn, "%s%s", header404toreturn, ErrorPage404);
         return data404toreturn;
+    } else if (responseCode == 418) {
+        char* header418toreturn = constructHTTPHeader418(strlen(Error418));
+        char* data418toreturn = (char*) malloc(strlen(header418toreturn) + strlen(Error418));
+        sprintf(data418toreturn, "%s%s", header418toreturn, Error418);
+        return data418toreturn;
     } else {
         char* header500toreturn = constructHTTPHeader500(servstring, strlen(Error500));
         char* data500toreturn = (char*)malloc(strlen(header500toreturn) + strlen(Error500));
