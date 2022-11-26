@@ -36,43 +36,51 @@ char* constructHTTPHeader200(char* server, long long length) {
 
     return HTTPHeader;
 }
+char* constructHTTPHeader403(char* server, long long length) {
+    char* HTTPHeader = (char*) malloc(strlen(server) + 1000);
+    sprintf(HTTPHeader, "HTTP/1.1 403 Forbidden\nStatus:403 Forbidden\nServer: %s\nContent-Type: text/html\nContent-Length: %lld\nAccept-Ranges: bytes\nConnection: close\n\n", server, length);
+
+    return HTTPHeader;
+}
 char* constructHTTPHeader404(char* server, long long length) {
     char* HTTPHeader = (char*) malloc(strlen(server) + 1000);
     sprintf(HTTPHeader, "HTTP/1.1 404 Not Found\nStatus: 404 Not Found\nServer: %s\nContent-Type: text/html\nContent-Length: %lld\nAccept-Ranges: bytes\nConnection: close\n\n", server, length);
 
     return HTTPHeader;
 }
-char* constructHTTPHeader418(long long length) {
+char* constructHTTPHeader418(char* server, long long length) {
     char* HTTPHeader = (char*) malloc(1000);
-    sprintf(HTTPHeader, "HTTP/1.1 418 I'm a teapot\nStatus: 418 Im a teapot\nServer: %s\nContent-Type: text/html\nContent-Length: %lld\nAccept-Ranges: bytes\nConnection: close\n\n", "MiniHTTP Teapot Server V/1.0", length);
+    sprintf(HTTPHeader, "HTTP/1.1 418 I'm a teapot\nStatus: 418 Im a teapot\nServer: %s\nContent-Type: text/html\nContent-Length: %lld\nAccept-Ranges: bytes\nConnection: close\n\n", server, length);
 
     return HTTPHeader;
 }
 
 char* HTTPResponseBuilder(int responseCode, char* response) {
     char* servstring = (char*)serverPrefrences["version"].get_ref<const std::string&>().c_str();
+    char* datatoreturn;
+    char* headertoreturn;
 
     if (responseCode == 200) {
-        char* headertoreturn = constructHTTPHeader200(servstring, strlen(response));
-        char* datatoreturn = (char*) malloc (strlen(headertoreturn) + strlen(response));
+        headertoreturn = constructHTTPHeader200(servstring, strlen(response));
+        datatoreturn = (char*) malloc (strlen(headertoreturn) + strlen(response));
         sprintf(datatoreturn, "%s%s", headertoreturn, response);
-        return datatoreturn;
     } else if (responseCode == 404) {
-        char* header404toreturn = constructHTTPHeader404(servstring, strlen(ErrorPage404));
-        char* data404toreturn = (char*)malloc(strlen(header404toreturn) + strlen(ErrorPage404));
-        sprintf(data404toreturn, "%s%s", header404toreturn, ErrorPage404);
-        return data404toreturn;
+        headertoreturn = constructHTTPHeader404(servstring, strlen(ErrorPage404));
+        datatoreturn = (char*)malloc(strlen(headertoreturn) + strlen(ErrorPage404));
+        sprintf(datatoreturn, "%s%s", headertoreturn, ErrorPage404);
     } else if (responseCode == 418) {
-        char* header418toreturn = constructHTTPHeader418(strlen(Error418));
-        char* data418toreturn = (char*) malloc(strlen(header418toreturn) + strlen(Error418));
-        sprintf(data418toreturn, "%s%s", header418toreturn, Error418);
-        return data418toreturn;
+        headertoreturn = constructHTTPHeader418(servstring, strlen(Error418));
+        datatoreturn = (char*) malloc(strlen(headertoreturn) + strlen(Error418));
+        sprintf(datatoreturn, "%s%s", headertoreturn, Error418);
     } else {
-        char* header500toreturn = constructHTTPHeader500(servstring, strlen(Error500));
-        char* data500toreturn = (char*)malloc(strlen(header500toreturn) + strlen(Error500));
-        sprintf(data500toreturn, "%s%s", header500toreturn, Error500);
-        return data500toreturn;
+        headertoreturn = constructHTTPHeader500(servstring, strlen(Error500));
+        datatoreturn = (char*)malloc(strlen(headertoreturn) + strlen(Error500));
+        sprintf(datatoreturn, "%s%s", headertoreturn, Error500);
     }
+
+    free(headertoreturn);
+
+    return datatoreturn;
 }
 
 
@@ -92,6 +100,7 @@ void connection(int mySocket) {
         response = HTTPResponseBuilder(404, NULL);
         write(mySocket, response, strlen(response));
         close(mySocket);
+        free(response);
         return;
     }
 
@@ -110,7 +119,6 @@ void connection(int mySocket) {
         response = HTTPResponseBuilder(404, NULL);
         write(mySocket, response, strlen(response));
         close(mySocket);
-        return;
     } else {
 
         char* filebuf = 0;
@@ -129,8 +137,11 @@ void connection(int mySocket) {
         response = HTTPResponseBuilder(200, filebuf);
         write(mySocket, response, strlen(response));
         close(mySocket);
-        return;
     }
+
+    free(response);
+
+    return;
 }
 
 void startServer(char* pathToJson) {
@@ -181,8 +192,11 @@ void startServer(char* pathToJson) {
             exit(EXIT_FAILURE);
         }
 
-        nonstd::jthread connectionThread(connection, new_socket);
-        connectionThread.detach();
-
+        if (serverPrefrences["useThreadsForConnection"]) {
+            nonstd::jthread connectionThread(connection, new_socket);
+            connectionThread.detach();
+        } else {
+            connection(new_socket);
+        }
     }
 }

@@ -1,5 +1,5 @@
 {
-    "useThreadsForConnection": true,
+    "useThreadsForConnection": false,
     "port": 8080,
     "version": "MiniHTTP 1.0"
 }
