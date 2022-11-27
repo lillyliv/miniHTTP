@@ -1,5 +1,6 @@
 {
     "useThreadsForConnection": false,
     "port": 8080,
-    "version": "MiniHTTP 1.0"
+    "version": "MiniHTTP 1.0",
+    "allowOctetStreamForUnsupportedContent": false
 }
